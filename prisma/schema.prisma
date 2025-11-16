@@ -1,0 +1,152 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+/// Define los roles de usuario en el sistema
+enum Role {
+  ADMIN
+  STUDENT
+}
+
+enum RaffleStatus {
+  DRAFT // Borrador, aún no activa
+  ACTIVE // Activa, aceptando ventas
+  FINISHED // Finalizada, esperando sorteo
+  DRAWN // Sorteada, con ganador
+  CANCELLED // Cancelada
+}
+
+enum TicketStatus {
+  PENDING // Reservado pero no pagado
+  PAID // Pagado y confirmado
+  CANCELLED // Cancelado
+}
+
+/// Define el estado de un pago/recibo
+enum PaymentStatus {
+  PENDING // Pago iniciado pero no completado
+  COMPLETED // Pago exitoso
+  FAILED // Pago fallido
+}
+
+/// Modelo para los Colegios
+model School {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  address   String?
+  createdAt DateTime @default(now())
+
+  // Relaciones
+  users User[]
+  rooms Room[]
+}
+
+/// Modelo para las Secciones (ej: "5to Año A")
+model Room {
+  id        String   @id @default(cuid())
+  name      String // Ej: "5to A"
+  createdAt DateTime @default(now())
+
+  // Relaciones
+  schoolId String
+  school   School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+
+  users User[]
+
+  @@unique([name, schoolId]) // Una sección "5to A" solo puede existir una vez por colegio
+}
+
+/// Modelo para Usuarios (Admin y Student)
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  password  String // Guardar siempre el hash, no el texto plano
+  role      Role     @default(STUDENT)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relaciones
+  schoolId String?
+  school   School? @relation(fields: [schoolId], references: [id], onDelete: Restrict)
+
+  roomId String?
+  room   Room?   @relation(fields: [roomId], references: [id], onDelete: SetNull)
+
+  // Relaciones con Rifas
+  ticketsBuyed  Ticket[]  @relation("TicketOwner")
+  invoices      Invoice[]
+  createdRaffle Raffle[]  @relation("RaffleOrganizer") // Solo para Admins
+}
+
+/// Modelo para las Rifas
+model Raffle {
+  id          String       @id @default(cuid())
+  title       String
+  description String?
+  prize       String // Descripción del premio
+  ticketPrice Decimal // Usar Decimal para dinero
+  status      RaffleStatus @default(DRAFT)
+  drawDate    DateTime? // Fecha del sorteo
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  // Relaciones
+  organizerId String // El ID del admin que la creó
+  organizer   User   @relation("RaffleOrganizer", fields: [organizerId], references: [id])
+
+  ticketsSold Ticket[]
+
+  // Relación con el ganador
+  winnerTicketId String? @unique // El ID del ticket ganador
+  winner         Ticket? @relation("WinningTicket", fields: [winnerTicketId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+/// Modelo para los Tickets
+model Ticket {
+  id        String       @id @default(cuid())
+  number    Int // El número del ticket
+  status    TicketStatus @default(PENDING)
+  createdAt DateTime     @default(now())
+
+  // Relaciones
+  raffleId String
+  raffle   Raffle @relation(fields: [raffleId], references: [id], onDelete: Cascade) // Si se borra la rifa, se borran los tickets
+
+  ownerId String
+  owner   User   @relation("TicketOwner", fields: [ownerId], references: [id], onDelete: Cascade) // Si se borra el usuario, se borran sus tickets
+
+  invoiceId String?
+  invoice   Invoice? @relation(fields: [invoiceId], references: [id], onDelete: SetNull) // Si se borra el recibo, el ticket queda sin recibo
+
+  // Relación para saber si este ticket es el ganador
+  winnerRaffle Raffle? @relation("WinningTicket")
+
+  // Un número de ticket solo puede existir una vez POR RIFA
+  @@unique([raffleId, number])
+  @@index([ownerId])
+  @@index([raffleId])
+}
+
+/// Modelo para Recibos (Pagos)
+model Invoice {
+  id            String        @id @default(cuid())
+  totalAmount   Decimal
+  paymentMethod String? // Ej: "Zelle", "Efectivo", "Stripe Checkout ID"
+  reference     String
+  status        PaymentStatus @default(PENDING)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  // Relaciones
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  // Un recibo puede agrupar el pago de varios tickets
+  tickets Ticket[]
+}

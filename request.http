@@ -1,0 +1,8 @@
+POST http://localhost:3000/auth/register HTTP/1.1
+Content-Type: application/json
+
+{
+  "name": "Testing",
+  "email": "test@test.com",
+  "password": "testing1"
+}
