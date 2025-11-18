@@ -20,14 +20,14 @@ export const createRaffle = async (req: Request, res: Response) => {
       });
     }
 
-    const { title, prize, ticketPrice, totalTickets, schoolId, description, drawDate } = validation.data;
+    const { title, prize, ticketPrice, totalTickets, roomId, description, drawDate } = validation.data;
     const organizerId = req.user!.id; // Obtenido del token por protectRoute/isAdmin
 
     // 2. Buscar todos los estudiantes del colegio especificado
     const students = await prisma.user.findMany({
       where: {
         role: Role.STUDENT,
-        schoolId: schoolId,
+        schoolId: roomId,
         // Opcional: Podrías querer filtrar solo estudiantes activos, etc.
       },
       select: { id: true },

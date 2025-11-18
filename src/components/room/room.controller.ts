@@ -60,6 +60,32 @@ export const getRoomById = async (req: Request, res: Response) => {
   }
 };
 
+export const getRoomsBySchoolId = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    const rooms = await prisma.room.findMany({
+      where: { schoolId: id },
+      include: {
+        school: { select: { id: true, name: true } },
+        users: { // Listar usuarios de la sección
+          select: { id: true, name: true, email: true, role: true }
+        }
+      }
+    });
+
+    if (!rooms) {
+      return res.status(404).json({ message: 'Secciones no encontradas o ID inválido.' });
+    }
+
+    return res.status(200).json({ rooms });
+
+  } catch (error) {
+    console.error("Error 500 al obtener las secciones por Colegio: ", error);
+    return res.status(500).json({ message: "Algo salió mal al obtener la sección." });
+  }
+};
+
 /**
  * ➕ Crear una nueva sección
  */

@@ -7,7 +7,8 @@ import {
   getAllRooms,
   getRoomById,
   updateRoom,
-  deleteRoom
+  deleteRoom,
+  getRoomsBySchoolId
 } from "./room.controller";
 
 const router = Router();
@@ -18,6 +19,7 @@ router.use(protectRoute, isAdmin);
 // Rutas de Secciones (Rooms)
 router.get("/", getAllRooms);      // GET /rooms?schoolId=...
 router.get("/:id", getRoomById);   // GET /rooms/:id
+router.get("/school/:id", getRoomsBySchoolId);
 router.post("/", createRoom);      // POST /rooms
 router.patch("/:id", updateRoom);  // PATCH /rooms/:id
 router.delete("/:id", deleteRoom); // DELETE /rooms/:id

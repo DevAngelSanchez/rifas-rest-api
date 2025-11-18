@@ -20,8 +20,8 @@ export const createRaffleSchema = z.object({
   // Campo clave: Cantidad total de tickets a generar
   totalTickets: z.number().int().min(1, "La rifa debe tener al menos 1 ticket."),
 
-  // schoolId es requerido para filtrar a qué estudiantes se asignarán
-  schoolId: z.string().cuid("ID de colegio inválido."),
+
+  roomId: z.string().cuid("ID de colegio inválido."),
 });
 
 // ----------------------------------------------------
