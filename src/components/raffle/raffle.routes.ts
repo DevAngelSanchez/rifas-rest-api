@@ -7,7 +7,8 @@ import {
   getAllRaffles,
   getRaffleById,
   updateRaffle,
-  deleteRaffle
+  deleteRaffle,
+  getRaffleSummary
 } from "./raffle.controller";
 
 const router = Router();
@@ -20,6 +21,7 @@ router.delete("/:id", protectRoute, isAdmin, deleteRaffle);
 // Rutas de visualización (GET) - Pueden ser accesibles por todos (ADMIN y STUDENTS)
 // Aunque podrías requerir autenticación para ver los detalles y tus tickets.
 router.get("/", protectRoute, getAllRaffles);
+router.get("/summary", protectRoute, getRaffleSummary);
 router.get("/:id", protectRoute, getRaffleById);
 
 

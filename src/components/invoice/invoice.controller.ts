@@ -3,76 +3,112 @@
 import { Request, Response } from 'express';
 import { prisma } from '../../utils/const';
 import { TicketStatus, PaymentStatus, Prisma } from '@prisma/client';
-import { markAsPaidSchema, updateInvoiceStatusSchema } from './invoice.schema';
+import { submitPaymentSchema, updateInvoiceStatusSchema } from './invoice.schema';
+import { uploadProof } from '../../middleware/multer.middleware';
 
+
+interface CustomRequest extends Request {
+  file?: Express.Multer.File;
+}
+
+export const uploadPaymentProof = uploadProof.single('proofFile');
 // ----------------------------------------------------
 // 💵 MARCAR TICKET COMO PAGADO (y crear factura)
 // PATCH /invoices/pay/:ticketId
 // ----------------------------------------------------
-export const markTicketAsPaid = async (req: Request, res: Response) => {
+export const submitPayment = async (req: CustomRequest, res: Response) => {
+
+  // 1. Obtener datos del archivo y usuario
+  const proofUrl = req.file ? `/uploads/proofs/${req.file.filename}` : null;
+  const userId = req.user!.id; // El estudiante que sube el pago
+
+  // 2. Preparar el cuerpo para la validación de Zod
+  // Nota: Multer parsea los campos de texto del FormData, pero los números y arrays pueden venir como strings.
+  const body = {
+    ...req.body,
+    ticketIds: req.body.ticketIds ? JSON.parse(req.body.ticketIds) : [],
+    totalAmount: req.body.totalAmount ? Number(req.body.totalAmount) : undefined,
+    amountBss: req.body.amountBss ? Number(req.body.amountBss) : undefined,
+    amountUsd: req.body.amountUsd ? Number(req.body.amountUsd) : undefined,
+    bcvRate: req.body.bcvRate ? Number(req.body.bcvRate) : undefined,
+  };
+
   try {
-    const { ticketId } = req.params;
-    const validation = markAsPaidSchema.safeParse(req.body);
+    // 3. Validación de Entrada
+    const validation = submitPaymentSchema.safeParse(body);
 
     if (!validation.success) {
+      // Si falla la validación, eliminar el archivo subido (se requiere libreria 'fs')
+      // if (req.file) { fs.unlinkSync(req.file.path); }
       return res.status(400).json({
-        message: 'Datos de pago inválidos',
+        message: 'Datos de pago incompletos o inválidos.',
         errors: validation.error.issues,
       });
     }
 
-    const { paymentMethod, reference } = validation.data;
-    const actingUserId = req.user!.id; // Usuario que registra el pago (Admin o Dueño del Ticket)
+    const {
+      ticketIds, ownerName, ownerPhone, totalAmount, paymentMethod, reference,
+      amountBss, amountUsd, bcvRate
+    } = validation.data;
 
-    // 1. Obtener el ticket
-    const ticket = await prisma.ticket.findUnique({
-      where: { id: ticketId },
-      include: { raffle: true }
+    // 4. Verificar existencia de Tickets
+    const tickets = await prisma.ticket.findMany({
+      where: { id: { in: ticketIds } },
+      select: { id: true, status: true, raffle: { select: { ticketPrice: true } } }
     });
 
-    if (!ticket || !ticket.raffle) {
-      return res.status(404).json({ message: "Ticket no encontrado." });
+    if (tickets.length !== ticketIds.length) {
+      return res.status(404).json({ message: "Uno o más tickets no fueron encontrados." });
     }
-    if (ticket.status === TicketStatus.PAID) {
-      return res.status(400).json({ message: "Este ticket ya ha sido pagado y facturado." });
+    if (tickets.some(t => t.status !== TicketStatus.PENDING)) {
+      return res.status(400).json({ message: "Algunos tickets ya han sido pagados o están en revisión." });
     }
 
-    // 2. Ejecutar la Transacción: Crear Factura y Actualizar Ticket
-    const rafflePrice = ticket.raffle.ticketPrice;
+    // Opcional: Verificar que el totalAmount sea correcto basado en la suma de ticketPrices
+    // const expectedTotal = tickets.reduce((sum, t) => sum.plus(t.raffle.ticketPrice), new Decimal(0));
+    // if (!totalAmount.equals(expectedTotal)) { /* ... error ... */ }
 
+    // 5. Ejecutar la Transacción: Crear Factura y Actualizar Tickets
     const transactionResult = await prisma.$transaction(async (tx) => {
 
-      // A. Crear la Factura
+      // A. Crear el Invoice
       const newInvoice = await tx.invoice.create({
         data: {
-          totalAmount: rafflePrice,
-          status: PaymentStatus.COMPLETED, // Asumimos pago completado al registrar
+          userId, // Estudiante que sube el pago
+          totalAmount,
           paymentMethod,
           reference,
-          userId: ticket.ownerId, // La factura es para el dueño del ticket
+          proofUrl, // URL del comprobante
+          amountBss,
+          amountUsd,
+          bcvRate,
+          status: PaymentStatus.PENDING, // Siempre PENDING para revisión del Admin
         }
       });
 
-      // B. Actualizar el estado del Ticket, enlazándolo a la factura
-      const updatedTicket = await tx.ticket.update({
-        where: { id: ticketId },
+      // B. Actualizar los Tickets asociados
+      await tx.ticket.updateMany({
+        where: { id: { in: ticketIds } },
         data: {
-          status: TicketStatus.PAID,
+          status: TicketStatus.PAID, // Nuevo estado
           invoiceId: newInvoice.id,
-        },
-        select: { id: true, number: true, status: true, ownerId: true }
+          ownerName,      // <-- Actualizamos OwnerName
+          ownerPhone,     // <-- Actualizamos OwnerPhone
+        }
       });
 
-      return { newInvoice, updatedTicket };
+      return newInvoice;
     });
 
-    res.status(200).json({
-      message: `Ticket #${ticket.number} marcado como pagado. Factura creada exitosamente.`,
-      invoice: transactionResult.newInvoice,
+    res.status(201).json({
+      message: `Pago de ${ticketIds.length} tickets enviado a revisión.`,
+      invoice: transactionResult,
     });
 
   } catch (error) {
-    console.error("Error 500 al marcar ticket como pagado:", error);
+    // Si hay un error, intentar eliminar el archivo subido
+    if (req.file) { /* Lógica para eliminar el archivo con fs.unlinkSync */ }
+    console.error("Error 500 al enviar pago:", error);
     return res.status(500).json({ message: "Error interno al procesar el pago." });
   }
 };

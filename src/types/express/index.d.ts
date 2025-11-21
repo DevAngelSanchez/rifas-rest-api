@@ -4,7 +4,8 @@ export interface UserPayload {
   id: string;
   role: Role;
   name: string;
-  email: string;
+  email?: string;
+  username?: string;
 }
 
 // Hacemos el objecto user global

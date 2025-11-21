@@ -22,9 +22,9 @@ export const registerSchema = z.object({
 // Schema para el login
 export const loginSchema = z.object({
   body: z.object({
-    email: z.string({
+    identifier: z.string({
       error: 'El email es requerido',
-    }).email('Email inválido'),
+    }),
 
     password: z.string({
       error: 'La contraseña es requerida',

@@ -64,10 +64,11 @@ model Room {
 /// Modelo para Usuarios (Admin y Student)
 model User {
   id        String   @id @default(cuid())
-  email     String   @unique
+  email     String?  @unique
+  username  String?  @unique
   name      String?
   password  String // Guardar siempre el hash, no el texto plano
-  role      Role     @default(STUDENT)
+  role      Role     @default(ADMIN)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -75,13 +76,12 @@ model User {
   schoolId String?
   school   School? @relation(fields: [schoolId], references: [id], onDelete: Restrict)
 
-  roomId String?
-  room   Room?   @relation(fields: [roomId], references: [id], onDelete: SetNull)
-
+  roomId        String?
+  room          Room?     @relation(fields: [roomId], references: [id], onDelete: SetNull)
   // Relaciones con Rifas
-  ticketsBuyed  Ticket[]  @relation("TicketOwner")
   invoices      Invoice[]
   createdRaffle Raffle[]  @relation("RaffleOrganizer") // Solo para Admins
+  tickets       Ticket[]
 }
 
 /// Modelo para las Rifas
@@ -118,35 +118,47 @@ model Ticket {
   raffleId String
   raffle   Raffle @relation(fields: [raffleId], references: [id], onDelete: Cascade) // Si se borra la rifa, se borran los tickets
 
-  ownerId String
-  owner   User   @relation("TicketOwner", fields: [ownerId], references: [id], onDelete: Cascade) // Si se borra el usuario, se borran sus tickets
+  ownerName  String?
+  ownerPhone String?
 
   invoiceId String?
   invoice   Invoice? @relation(fields: [invoiceId], references: [id], onDelete: SetNull) // Si se borra el recibo, el ticket queda sin recibo
 
   // Relación para saber si este ticket es el ganador
   winnerRaffle Raffle? @relation("WinningTicket")
+  userId       String?
+  user         User?   @relation(fields: [userId], references: [id])
 
   // Un número de ticket solo puede existir una vez POR RIFA
   @@unique([raffleId, number])
-  @@index([ownerId])
   @@index([raffleId])
 }
 
 /// Modelo para Recibos (Pagos)
 model Invoice {
-  id            String        @id @default(cuid())
-  totalAmount   Decimal
-  paymentMethod String? // Ej: "Zelle", "Efectivo", "Stripe Checkout ID"
-  reference     String
-  status        PaymentStatus @default(PENDING)
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
+  id String @id @default(cuid())
+
+  // Montos
+  totalAmount Decimal // Monto Total (Este será el total en BsS o USD, según la lógica del frontend)
+
+  // Campos de Divisas/Tasa
+  amountBss Decimal? // Monto específico en BsS (obligatorio si el método es Pago Móvil/Transferencia)
+  amountUsd Decimal? // Monto específico en USD (usado para efectivo)
+  bcvRate   Decimal? // Tasa BCV aplicada (Obligatorio si se usa Pago Móvil/Transferencia)
+
+  // Soportes de Pago
+  paymentMethod String? // Ej: "Efectivo USD", "Transferencia", "Pago Móvil"
+  reference     String? // Referencia del pago o número de transacción
+  proofUrl      String? // URL o Path del archivo/imagen del comprobante de pago subido
+
+  status PaymentStatus @default(PENDING) // PENDING (para revisión), APPROVED, REJECTED
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relaciones
   userId String
   user   User   @relation(fields: [userId], references: [id])
 
-  // Un recibo puede agrupar el pago de varios tickets
   tickets Ticket[]
 }

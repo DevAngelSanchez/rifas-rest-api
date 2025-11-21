@@ -27,7 +27,7 @@ export const createRaffle = async (req: Request, res: Response) => {
     const students = await prisma.user.findMany({
       where: {
         role: Role.STUDENT,
-        schoolId: roomId,
+        roomId: roomId,
         // Opcional: Podrías querer filtrar solo estudiantes activos, etc.
       },
       select: { id: true },
@@ -42,8 +42,8 @@ export const createRaffle = async (req: Request, res: Response) => {
 
     // 3. Lógica de asignación de tickets
     const numStudents = students.length;
-    const baseTicketsPerStudent = Math.floor(totalTickets / numStudents); // Ej: 100 / 3 = 33
-    let remainingTickets = totalTickets % numStudents; // Ej: 100 % 3 = 1 (el sobrante)
+    const baseTicketsPerStudent = Math.floor(totalTickets / numStudents);
+    let remainingTickets = totalTickets % numStudents;
 
     const studentsWithTickets = students.map((student, index) => {
       // El último estudiante (o los primeros 'remainingTickets' si quieres una distribución más justa)
@@ -60,7 +60,7 @@ export const createRaffle = async (req: Request, res: Response) => {
         ownerId: student.id,
         count: assignedTickets
       };
-    }).filter(item => item.count > 0); // Filtra estudiantes con 0 tickets si totalTickets < numStudents
+    }).filter(item => item.count > 0);
 
     // 4. Crear la Rifa y todos los Tickets dentro de una transacción
     let currentTicketNumber = 1;
@@ -70,7 +70,7 @@ export const createRaffle = async (req: Request, res: Response) => {
       for (let i = 0; i < assignment.count; i++) {
         ticketCreationData.push({
           number: currentTicketNumber++,
-          ownerId: assignment.ownerId,
+          userId: assignment.ownerId,
           status: TicketStatus.PENDING, // Estado inicial
         });
       }
@@ -86,7 +86,7 @@ export const createRaffle = async (req: Request, res: Response) => {
           ticketPrice,
           drawDate: drawDate ? new Date(drawDate) : null,
           organizerId,
-          status: RaffleStatus.DRAFT, // Empieza como borrador
+          status: RaffleStatus.ACTIVE, // Empieza como borrador
         }
       });
 
@@ -155,11 +155,11 @@ export const getRaffleById = async (req: Request, res: Response) => {
       include: {
         organizer: { select: { id: true, name: true } },
         ticketsSold: { // Opcional: incluir una lista de todos los tickets
-          select: { id: true, number: true, status: true, owner: { select: { id: true, name: true, room: true } } },
+          select: { id: true, number: true, status: true, user: { select: { id: true, name: true, room: true } } },
           orderBy: { number: 'asc' }
         },
         winner: { // Incluir información del ticket ganador si existe
-          select: { number: true, owner: { select: { name: true, email: true } } }
+          select: { number: true, user: { select: { name: true, email: true } } }
         }
       }
     });
@@ -252,3 +252,36 @@ export const deleteRaffle = async (req: Request, res: Response) => {
     return res.status(500).json({ message: "Algo salió mal eliminando la rifa." });
   }
 }
+
+export const getRaffleSummary = async (req: Request, res: Response) => {
+  try {
+    // --- 1. Total de Rifas Activas ---
+    const activeRafflesCount = await prisma.raffle.count({
+      where: {
+        status: RaffleStatus.ACTIVE, // Asumo que tienes un enum ACTIVE
+      },
+    });
+
+    // --- 2. Total de Tickets Generados (En todas las Rifas) ---
+    // Simplemente contamos todos los registros en la tabla Ticket
+    const totalTicketsCount = await prisma.ticket.count();
+
+    // --- 3. Total de Tickets Pagados (Vendidos) ---
+    // Contamos los tickets cuyo status es PAID
+    const paidTicketsCount = await prisma.ticket.count({
+      where: {
+        status: TicketStatus.PAID, // Asumo que tienes un enum PAID para el estado de pago
+      },
+    });
+
+    res.status(200).json({
+      totalTickets: totalTicketsCount,
+      activeRaffles: activeRafflesCount,
+      paidTickets: paidTicketsCount,
+    });
+
+  } catch (error) {
+    console.error("Error 500 al obtener el resumen del dashboard: ", error);
+    return res.status(500).json({ message: "Algo salió mal al obtener el resumen de rifas." });
+  }
+};

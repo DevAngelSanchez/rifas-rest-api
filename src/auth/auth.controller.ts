@@ -63,8 +63,9 @@ export const register = async (req: Request, res: Response) => {
 // --- LOGIN ---
 export const login = async (req: Request, res: Response) => {
   try {
-    // 1. Validar la entrada
-    const validation = loginSchema.safeParse(req);
+    // 1. Validar la entrada (Asumimos que loginSchema valida { identifier: string, password: string })
+    // Si tu esquema Zod aún usa { email: string, password: string }, lo usamos aquí:
+    const validation = loginSchema.safeParse(req); // Cambiado a req.body si es un POST
 
     if (!validation.success) {
       return res.status(400).json({
@@ -73,41 +74,46 @@ export const login = async (req: Request, res: Response) => {
       });
     }
 
-    const { email, password } = validation.data.body;
+    const { identifier, password } = validation.data.body; // Cambiamos el alias a identifier
 
-    // 2. Buscar al usuario por email
-    const user = await prisma.user.findUnique({
-      where: { email },
+    // 2. Buscar al usuario por email O nombre de usuario
+    const user = await prisma.user.findFirst({ // findFirst es necesario aquí porque el filtro no es 'Unique'
+      where: {
+        OR: [
+          { email: identifier },      // Intenta coincidir como email
+          { username: identifier },   // Intenta coincidir como username
+        ],
+      },
     });
 
     if (!user) {
       return res.status(401).json({ message: 'Credenciales inválidas.' });
     }
 
-    // 3. Comparar la contraseña
+    // 3. Comparar la contraseña (SIN CAMBIOS)
     const isMatch = await bcrypt.compare(password, user.password);
 
     if (!isMatch) {
       return res.status(401).json({ message: 'Credenciales inválidas.' });
     }
 
-    // 4. Crear el Payload del JWT (con tipado)
+    // 4. Crear el Payload del JWT (SIN CAMBIOS)
     const payload: JwtPayload = {
       id: user.id,
       role: user.role,
-      name: user.name ? user.name : "username"
+      name: user.name ? user.name : user.username || "Usuario" // Usamos username como fallback
     };
 
-    // 5. Firmar y enviar el token
+    // 5. Firmar y enviar el token (SIN CAMBIOS)
     const token = jwt.sign(
       payload,
-      process.env.JWT_SECRET as string, // TypeScript nos pide asegurar que no sea 'undefined'
+      process.env.JWT_SECRET as string,
       { expiresIn: '8h' }
     );
 
     res.cookie('jwt_token', token, {
       httpOnly: true,
-      secure: false,
+      secure: process.env.NODE_ENV === 'production', // Mejor práctica en producción
       sameSite: 'lax',
       maxAge: 1000 * 60 * 60 * 8,
     });
@@ -120,6 +126,7 @@ export const login = async (req: Request, res: Response) => {
         email: user.email,
         name: user.name,
         role: user.role,
+        username: user.username, // Añadimos username a la respuesta
       },
     });
 
@@ -148,7 +155,7 @@ export const checkAuthStatus = async (req: Request, res: Response) => {
     // 1. BUSCA el usuario COMPLETO con sus relaciones
     const user = await prisma.user.findUnique({
       where: { id: req.user.id },
-      include: { school: true, room: true, ticketsBuyed: true /* ... otras relaciones */ }
+      include: { school: true, room: true, tickets: true /* ... otras relaciones */ }
     });
 
     if (!user) {

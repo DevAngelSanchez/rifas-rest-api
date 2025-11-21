@@ -7,7 +7,8 @@ import {
   getUserById,
   createUser,
   updateUser,
-  deleteUser
+  deleteUser,
+  createStudentBulk
 } from "./user.controller";
 
 const router = Router();
@@ -19,6 +20,7 @@ router.use(protectRoute, isAdmin);
 router.get("/", getAllUsers);      // GET /users (con filtros opcionales: ?role=STUDENT&schoolId=...)
 router.get("/:id", getUserById);   // GET /users/:id
 router.post("/", createUser);      // POST /users
+router.post("/bulk", createStudentBulk);      // POST /users
 router.patch("/:id", updateUser);  // PATCH /users/:id
 router.delete("/:id", deleteUser); // DELETE /users/:id
 

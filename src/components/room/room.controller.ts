@@ -43,7 +43,7 @@ export const getRoomById = async (req: Request, res: Response) => {
       include: {
         school: { select: { id: true, name: true } },
         users: { // Listar usuarios de la sección
-          select: { id: true, name: true, email: true, role: true }
+          select: { id: true, name: true, username: true, email: true, role: true }
         }
       }
     });

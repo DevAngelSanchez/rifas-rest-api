@@ -6,6 +6,27 @@ import { Role } from '@prisma/client';
 import bcrypt from 'bcrypt';
 import { Prisma } from '@prisma/client';
 import { createUserSchema, updateUserSchema } from './user.schema';
+import z from 'zod';
+
+const generateSimplePassword = (fullName: string): string => {
+  const initial = fullName.trim().charAt(0).toUpperCase();
+  return `${initial}12345678`;
+};
+
+export const studentSchema = z.object({
+  name: z.string().min(2, "Nombre completo requerido."),
+  username: z.string().min(3, "Nombre de usuario requerido.").regex(/^[a-zA-Z0-9_.]+$/, "El usuario solo puede contener letras, números, puntos y guiones bajos."),
+  email: z.string().email("Correo electrónico inválido.").optional().or(z.literal('')), // Email opcional
+  phone: z.string().optional(),
+});
+
+// --- D. Esquema para la carga masiva de Estudiantes ---
+// Este es el tipo que contendrá el array de estudiantes a enviar.
+export const bulkStudentSchema = z.object({
+  roomId: z.string().min(1, "Debe seleccionar la sección (room) para asignar estos estudiantes."),
+  students: z.array(studentSchema).min(1, "Debe añadir al menos un estudiante."),
+});
+
 
 // ----------------------------------------------------
 // 📚 OBTENER TODOS LOS USUARIOS (con filtros)
@@ -63,9 +84,7 @@ export const getUserById = async (req: Request, res: Response) => {
         createdAt: true,
         school: { select: { id: true, name: true } },
         room: { select: { id: true, name: true } },
-        ticketsBuyed: { // Incluye una lista básica de tickets
-          select: { id: true, number: true, status: true, raffle: { select: { title: true } } }
-        }
+        tickets: true
       }
     });
 
@@ -137,6 +156,74 @@ export const createUser = async (req: Request, res: Response) => {
   } catch (error) {
     console.error("Error 500 al crear usuario: ", error);
     return res.status(500).json({ message: "Algo salió mal creando el usuario." });
+  }
+};
+
+export const createStudentBulk = async (req: Request, res: Response) => {
+  try {
+    // Validación del payload completo
+    const validation = bulkStudentSchema.safeParse(req.body);
+
+    if (!validation.success) {
+      return res.status(400).json({
+        message: 'Datos de entrada inválidos',
+        errors: validation.error.issues,
+      });
+    }
+
+    const { roomId, students } = validation.data;
+    const saltRounds = 10; // Usar una constante de tu archivo utils/const
+
+    // 1. Verificar existencia de Room
+    const room = await prisma.room.findUnique({ where: { id: roomId } });
+    if (!room) {
+      return res.status(400).json({ message: "ID de sección (room) inválido. Los estudiantes no pueden ser asignados." });
+    }
+
+    // 2. Verificar unicidad de username y preparar datos para la creación
+    const usernames = students.map(s => s.username);
+    const existingUsers = await prisma.user.findMany({
+      where: { username: { in: usernames } },
+      select: { username: true }
+    });
+
+    if (existingUsers.length > 0) {
+      const existingUsernames = existingUsers.map(u => u.username);
+      return res.status(400).json({
+        message: `Los siguientes nombres de usuario ya están registrados: ${existingUsernames.join(', ')}`,
+      });
+    }
+
+    // 3. Hashear contraseñas y preparar datos de inserción masiva
+    const studentsToCreate = await Promise.all(students.map(async (student) => {
+      const simplePassword = generateSimplePassword(student.name);
+      const hashedPassword = await bcrypt.hash(simplePassword, saltRounds);
+
+      return {
+        username: student.username,
+        password: hashedPassword,
+        name: student.name,
+        phone: student.phone,
+        role: Role.STUDENT,
+        roomId: roomId,
+        schoolId: room.schoolId, // Se hereda del Room
+      };
+    }));
+
+    // 4. Crear los estudiantes en una transacción
+    const newUsers = await prisma.user.createMany({
+      data: studentsToCreate,
+      skipDuplicates: true, // Aunque ya verificamos, es una buena práctica
+    });
+
+    res.status(201).json({
+      message: `${newUsers.count} estudiantes creados y asignados a la sección ${room.name}.`,
+      count: newUsers.count
+    });
+
+  } catch (error) {
+    console.error("Error 500 al crear estudiantes en bulk: ", error);
+    return res.status(500).json({ message: "Algo salió mal creando los estudiantes." });
   }
 };
 

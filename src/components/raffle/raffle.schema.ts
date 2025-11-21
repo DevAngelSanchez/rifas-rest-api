@@ -15,7 +15,7 @@ export const createRaffleSchema = z.object({
   ticketPrice: z.number().positive("El precio del ticket debe ser un valor positivo."),
 
   // drawDate debe ser una fecha futura
-  drawDate: z.string().datetime("Formato de fecha de sorteo inválido.").optional(),
+  drawDate: z.string().optional(),
 
   // Campo clave: Cantidad total de tickets a generar
   totalTickets: z.number().int().min(1, "La rifa debe tener al menos 1 ticket."),

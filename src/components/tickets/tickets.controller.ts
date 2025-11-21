@@ -24,7 +24,7 @@ export const getTicketsByRaffleId = async (req: Request, res: Response) => {
         id: true,
         number: true,
         status: true,
-        owner: {
+        user: {
           select: { id: true, name: true, room: { select: { name: true } } }
         },
       },
@@ -51,7 +51,7 @@ export const getTicketById = async (req: Request, res: Response) => {
       where: { id },
       include: {
         raffle: { select: { title: true, prize: true, ticketPrice: true } },
-        owner: { select: { id: true, name: true, room: { select: { name: true } } } },
+        user: { select: { id: true, name: true, room: { select: { name: true } } } },
         invoice: { select: { id: true, totalAmount: true, updatedAt: true } }
       }
     });
@@ -61,7 +61,7 @@ export const getTicketById = async (req: Request, res: Response) => {
     }
 
     // ⚠️ Validación de propietario si no es Admin
-    if (req.user!.role !== 'ADMIN' && ticket.ownerId !== userId) {
+    if (req.user!.role !== 'ADMIN' && ticket.userId !== userId) {
       return res.status(403).json({ message: 'Acceso denegado. Solo puedes ver tus propios tickets.' });
     }
 
@@ -78,13 +78,11 @@ export const getTicketById = async (req: Request, res: Response) => {
 // ----------------------------------------------------
 export const getStudentTicketsForRaffle = async (req: Request, res: Response) => {
   try {
-    const { raffleId } = req.params;
     const userId = req.user!.id;
 
     const tickets = await prisma.ticket.findMany({
       where: {
-        raffleId: raffleId,
-        ownerId: userId,
+        userId: userId,
       },
       select: {
         id: true,

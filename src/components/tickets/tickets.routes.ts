@@ -12,7 +12,7 @@ const router = Router();
 
 // Rutas de visualización para el dueño/estudiante
 // GET /tickets/my-tickets/:raffleId -> Ver mis tickets asignados para una rifa
-router.get("/my-tickets/:raffleId", protectRoute, getStudentTicketsForRaffle);
+router.get("/my-tickets", protectRoute, getStudentTicketsForRaffle);
 
 // Rutas de gestión (Admin)
 router.use(protectRoute, isAdmin);
