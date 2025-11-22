@@ -10,6 +10,7 @@ import {
   deleteRaffle,
   getRaffleSummary
 } from "./raffle.controller";
+import { getRaffleInvoices } from "../invoice/invoice.controller";
 
 const router = Router();
 
@@ -23,6 +24,7 @@ router.delete("/:id", protectRoute, isAdmin, deleteRaffle);
 router.get("/", protectRoute, getAllRaffles);
 router.get("/summary", protectRoute, getRaffleSummary);
 router.get("/:id", protectRoute, getRaffleById);
+router.get("/:raffleId/invoices", protectRoute, getRaffleInvoices);
 
 
 export default router;

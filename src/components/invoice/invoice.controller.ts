@@ -178,3 +178,78 @@ export const getInvoiceById = async (req: Request, res: Response) => {
     return res.status(500).json({ message: "Algo salió mal al obtener la factura." });
   }
 };
+
+/**
+ * @name getRaffleInvoices
+ * @description Obtiene todas las facturas únicas asociadas a los tickets de una rifa específica.
+ * @param {Request} req - Espera 'raffleId' en req.params
+ * @param {Response} res
+ */
+export const getRaffleInvoices = async (req: Request, res: Response) => {
+  try {
+    const { raffleId } = req.params;
+
+    if (!raffleId) {
+      return res.status(400).json({ message: "Se requiere el ID de la rifa (raffleId)." });
+    }
+
+    // 1. Encontrar todos los IDs de Invoice asociados a los tickets de la rifa.
+    // Usamos select y map para obtener un array plano de IDs.
+    const ticketInvoices = await prisma.ticket.findMany({
+      where: {
+        raffleId: raffleId,
+        invoiceId: {
+          not: null, // Solo tickets que tienen una factura asociada
+        },
+      },
+      select: {
+        invoiceId: true,
+      },
+    });
+
+    // 2. Extraer los IDs únicos de las facturas para evitar duplicados.
+    const uniqueInvoiceIds = Array.from(
+      new Set(ticketInvoices.map(t => t.invoiceId).filter(Boolean) as string[])
+    );
+
+    // 3. Consultar las facturas utilizando los IDs únicos
+    const invoices = await prisma.invoice.findMany({
+      where: {
+        id: {
+          in: uniqueInvoiceIds,
+        },
+      },
+      include: {
+        // Incluir el usuario comprador
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            school: { select: { name: true } },
+          },
+        },
+        // Incluir los tickets para saber cuántos se compraron en esa factura
+        tickets: {
+          where: {
+            raffleId: raffleId // Filtramos para solo incluir los tickets de ESTA rifa
+          },
+          select: {
+            id: true,
+            number: true,
+            status: true,
+            ownerName: true,
+            ownerPhone: true
+          }
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    return res.status(200).json({ invoices, count: invoices.length });
+
+  } catch (error) {
+    console.error(`Error 500 al obtener facturas para la rifa ${req.params.raffleId}:`, error);
+    return res.status(500).json({ message: "Algo salió mal al obtener las facturas de la rifa." });
+  }
+};

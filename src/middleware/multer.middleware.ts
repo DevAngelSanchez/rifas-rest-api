@@ -3,7 +3,7 @@ import multer from 'multer';
 import path from 'path';
 
 // --- Definir Rutas de Subida ---
-const uploadDir = path.join(__dirname, 'uploads', 'proofs');
+const uploadDir = path.join(__dirname, "..", "..", "public", 'uploads', 'proofs');
 // Asumiendo que 'uploads' está en la raíz de tu proyecto (junto a rifas-api)
 
 // Asegurarse de que el directorio exista
@@ -19,7 +19,7 @@ const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     // La carpeta donde se guardarán los comprobantes (debe existir)
     // Puedes usar 'uploads/invoices' o similar
-    cb(null, path.join(__dirname, '..', '..', 'uploads', 'proofs'));
+    cb(null, uploadDir);
   },
   filename: (req, file, cb) => {
     // Genera un nombre único para el archivo (ej: invoice-123456789-timestamp.jpg)
