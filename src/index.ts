@@ -11,11 +11,24 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const UPLOADS_STATIC_PATH = path.join(__dirname, '..', 'public', 'uploads');
 
+const ALLOWED_ORIGINS = [
+  process.env.FRONTEND_URL,
+  "http://localhost:5173",
+  "https://rifas-46tm8vmwx-devangelsanchezs-projects.vercel.app",
+  "https://rifas-lyart.vercel.app/"
+];
+
 // Middlewares
 app.use(express.json());
 app.use(cookieParser());
 app.use(cors({
-  origin: process.env.FRONTEND_URL || "http://localhost:5173" || "https://rifas-46tm8vmwx-devangelsanchezs-projects.vercel.app/" || "https://rifas-lyart.vercel.app/", // Asegúrate de que esta URL sea la de tu frontend
+  origin: (origin, callback) => {
+    if (!origin || ALLOWED_ORIGINS.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  }, // Asegúrate de que esta URL sea la de tu frontend
   methods: "GET, HEAD, POST, PUT, PATCH, DELETE",
   credentials: true
 }));
