@@ -31,20 +31,12 @@ export const submitPaymentSchema = z.object({
   amountUsd: decimalValidation.optional(),
 
   // Tasa BCV: Requerido solo para ciertos métodos (ej: Transferencia)
-  bcvRate: decimalValidation.optional(),
 
   // El 'proofUrl' se gestiona fuera de Zod ya que es el resultado de Multer.
 
 }).superRefine((data, ctx) => {
   // Lógica condicional: Si es 'Transferencia' o 'Pago Móvil', el BCV y BSS deben estar presentes.
   if (data.paymentMethod === 'Transferencia' || data.paymentMethod === 'Pago Móvil') {
-    if (!data.bcvRate) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "La tasa BCV es requerida para pagos electrónicos.",
-        path: ['bcvRate'],
-      });
-    }
     if (!data.amountBss) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,

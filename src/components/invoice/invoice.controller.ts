@@ -48,7 +48,7 @@ export const submitPayment = async (req: CustomRequest, res: Response) => {
 
     const {
       ticketIds, ownerName, ownerPhone, totalAmount, paymentMethod, reference,
-      amountBss, amountUsd, bcvRate
+      amountBss, amountUsd
     } = validation.data;
 
     // 4. Verificar existencia de Tickets
