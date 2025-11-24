@@ -64,11 +64,6 @@ export const submitPayment = async (req: CustomRequest, res: Response) => {
       return res.status(400).json({ message: "Algunos tickets ya han sido pagados o están en revisión." });
     }
 
-    // Opcional: Verificar que el totalAmount sea correcto basado en la suma de ticketPrices
-    // const expectedTotal = tickets.reduce((sum, t) => sum.plus(t.raffle.ticketPrice), new Decimal(0));
-    // if (!totalAmount.equals(expectedTotal)) { /* ... error ... */ }
-
-    // 5. Ejecutar la Transacción: Crear Factura y Actualizar Tickets
     const transactionResult = await prisma.$transaction(async (tx) => {
 
       // A. Crear el Invoice
@@ -82,7 +77,7 @@ export const submitPayment = async (req: CustomRequest, res: Response) => {
           amountBss,
           amountUsd,
           // bcvRate,
-          status: PaymentStatus.PENDING, // Siempre PENDING para revisión del Admin
+          status: PaymentStatus.COMPLETED, // Siempre PENDING para revisión del Admin
         }
       });
 
