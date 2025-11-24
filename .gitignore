@@ -4,3 +4,4 @@ dist
 
 prisma/migrations
 public/uploads
+dist

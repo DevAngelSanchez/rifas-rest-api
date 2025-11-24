@@ -1,16 +1,10 @@
 {
   "compilerOptions": {
-    "target": "es2020", // Mejorar el target a una versión moderna
+    "target": "es2020",
     "module": "commonjs",
     "rootDir": "./src",
     "outDir": "./dist",
-    // --- NUEVOS/MODIFICADOS ---
-    // 1. Resolver Módulos de Node:
-    "moduleResolution": "node", // CRUCIAL: Dice a tsc cómo buscar módulos como 'path'
     "strict": true,
-    // Si tienes problemas persistentes con TS7006, puedes descomentar la siguiente línea:
-    // "noImplicitAny": false,
-    // -------------------------
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true
