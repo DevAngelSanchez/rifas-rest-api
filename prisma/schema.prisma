@@ -144,7 +144,7 @@ model Invoice {
   // Campos de Divisas/Tasa
   amountBss Decimal? // Monto específico en BsS (obligatorio si el método es Pago Móvil/Transferencia)
   amountUsd Decimal? // Monto específico en USD (usado para efectivo)
-  bcvRate   Decimal? // Tasa BCV aplicada (Obligatorio si se usa Pago Móvil/Transferencia)
+  bcvRate   Decimal?
 
   // Soportes de Pago
   paymentMethod String? // Ej: "Efectivo USD", "Transferencia", "Pago Móvil"

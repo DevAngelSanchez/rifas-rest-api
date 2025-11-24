@@ -9,16 +9,17 @@ import multer from 'multer';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const UPLOADS_STATIC_PATH = path.join(__dirname, '..', 'public', 'uploads');
+const UPLOADS_STATIC_PATH = path.join(process.cwd(), 'public', 'uploads');
 
 const ALLOWED_ORIGINS = [
   process.env.FRONTEND_URL,
   "http://localhost:5173",
   "https://rifas-46tm8vmwx-devangelsanchezs-projects.vercel.app",
-  "https://rifas-lyart.vercel.app/"
+  "https://rifas-lyart.vercel.app"
 ];
 
 // Middlewares
+app.use('/uploads', express.static(UPLOADS_STATIC_PATH));
 app.use(express.json());
 app.use(cookieParser());
 app.use(cors({
@@ -35,7 +36,6 @@ app.use(cors({
 
 console.log('Ruta estática configurada para:', UPLOADS_STATIC_PATH);
 
-app.use('/uploads', express.static(UPLOADS_STATIC_PATH));
 
 // Usar las rutas de autenticación
 app.use('/auth', authRoutes);

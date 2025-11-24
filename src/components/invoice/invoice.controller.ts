@@ -30,7 +30,7 @@ export const submitPayment = async (req: CustomRequest, res: Response) => {
     totalAmount: req.body.totalAmount ? Number(req.body.totalAmount) : undefined,
     amountBss: req.body.amountBss ? Number(req.body.amountBss) : undefined,
     amountUsd: req.body.amountUsd ? Number(req.body.amountUsd) : undefined,
-    bcvRate: req.body.bcvRate ? Number(req.body.bcvRate) : undefined,
+    // bcvRate: req.body.bcvRate ? Number(req.body.bcvRate) : undefined,
   };
 
   try {
@@ -81,7 +81,7 @@ export const submitPayment = async (req: CustomRequest, res: Response) => {
           proofUrl, // URL del comprobante
           amountBss,
           amountUsd,
-          bcvRate,
+          // bcvRate,
           status: PaymentStatus.PENDING, // Siempre PENDING para revisión del Admin
         }
       });
