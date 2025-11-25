@@ -143,7 +143,7 @@ export const assignTicket = async (req: Request, res: Response) => {
       data: {
         ownerName,
         ownerPhone: ownerPhone || null,
-        status: "ASSIGNED",
+        status: TicketStatus.ASSIGNED,
       },
       select: {
         id: true,
