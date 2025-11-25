@@ -24,7 +24,7 @@ enum RaffleStatus {
 enum TicketStatus {
   PENDING // Reservado pero no pagado
   PAID // Pagado y confirmado
-  CANCELLED // Cancelado
+  ASSIGNED // ASIGnado
 }
 
 /// Define el estado de un pago/recibo

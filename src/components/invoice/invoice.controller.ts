@@ -69,15 +69,14 @@ export const submitPayment = async (req: CustomRequest, res: Response) => {
       // A. Crear el Invoice
       const newInvoice = await tx.invoice.create({
         data: {
-          userId, // Estudiante que sube el pago
+          userId,
           totalAmount,
           paymentMethod,
           reference,
-          proofUrl, // URL del comprobante
+          proofUrl,
           amountBss,
           amountUsd,
-          // bcvRate,
-          status: PaymentStatus.COMPLETED, // Siempre PENDING para revisión del Admin
+          status: PaymentStatus.COMPLETED,
         }
       });
 
@@ -85,10 +84,10 @@ export const submitPayment = async (req: CustomRequest, res: Response) => {
       await tx.ticket.updateMany({
         where: { id: { in: ticketIds } },
         data: {
-          status: TicketStatus.PAID, // Nuevo estado
+          status: TicketStatus.PAID,
           invoiceId: newInvoice.id,
-          ownerName,      // <-- Actualizamos OwnerName
-          ownerPhone,     // <-- Actualizamos OwnerPhone
+          ownerName,
+          ownerPhone,
         }
       });
 
@@ -234,7 +233,12 @@ export const getRaffleInvoices = async (req: Request, res: Response) => {
             number: true,
             status: true,
             ownerName: true,
-            ownerPhone: true
+            ownerPhone: true,
+            user: {
+              select: {
+                name: true
+              }
+            }
           }
         },
       },

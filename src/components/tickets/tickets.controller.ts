@@ -88,7 +88,9 @@ export const getStudentTicketsForRaffle = async (req: Request, res: Response) =>
         id: true,
         number: true,
         status: true,
-        raffle: { select: { title: true, ticketPrice: true } }
+        raffle: { select: { title: true, ticketPrice: true } },
+        ownerName: true,
+        ownerPhone: true
       },
       orderBy: { number: 'asc' }
     });
@@ -105,5 +107,63 @@ export const getStudentTicketsForRaffle = async (req: Request, res: Response) =>
   } catch (error) {
     console.error("Error 500 al obtener tickets del estudiante: ", error);
     return res.status(500).json({ message: "Algo salió mal al obtener tus tickets." });
+  }
+};
+
+export const assignTicket = async (req: Request, res: Response) => {
+  try {
+    const { ticketId } = req.params;
+    const { ownerName, ownerPhone } = req.body;
+
+    if (!ownerName || ownerName.trim() === "") {
+      return res.status(400).json({
+        message: "El nombre del comprador es obligatorio",
+      });
+    }
+
+    // 1️⃣ Verificar si el ticket existe
+    const ticket = await prisma.ticket.findUnique({
+      where: { id: ticketId },
+    });
+
+    if (!ticket) {
+      return res.status(404).json({ message: "Ticket no encontrado" });
+    }
+
+    // 2️⃣ Evitar asignar tickets ya vendidos o cancelados
+    if (ticket.status === "PAID") {
+      return res.status(400).json({
+        message: "Este ticket no se puede asignar",
+      });
+    }
+
+    // 3️⃣ Actualizar ticket
+    const updatedTicket = await prisma.ticket.update({
+      where: { id: ticketId },
+      data: {
+        ownerName,
+        ownerPhone: ownerPhone || null,
+        status: "ASSIGNED",
+      },
+      select: {
+        id: true,
+        number: true,
+        status: true,
+        ownerName: true,
+        ownerPhone: true,
+        raffleId: true,
+      }
+    });
+
+    return res.status(200).json({
+      message: "Ticket asignado correctamente",
+      ticket: updatedTicket,
+    });
+
+  } catch (error: any) {
+    console.error("Error al asignar ticket:", error);
+    return res.status(500).json({
+      message: "Algo salió mal al asignar el ticket",
+    });
   }
 };

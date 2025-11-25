@@ -6,6 +6,7 @@ import {
   getTicketsByRaffleId,
   getTicketById,
   getStudentTicketsForRaffle,
+  assignTicket,
 } from "./tickets.controller";
 
 const router = Router();
@@ -13,6 +14,7 @@ const router = Router();
 // Rutas de visualización para el dueño/estudiante
 // GET /tickets/my-tickets/:raffleId -> Ver mis tickets asignados para una rifa
 router.get("/my-tickets", protectRoute, getStudentTicketsForRaffle);
+router.put("/:ticketId/assign", protectRoute, assignTicket);
 
 // Rutas de gestión (Admin)
 router.use(protectRoute, isAdmin);
@@ -21,5 +23,6 @@ router.use(protectRoute, isAdmin);
 router.get("/raffle/:raffleId", getTicketsByRaffleId);
 // GET /tickets/:id -> Obtener un ticket individual (incluye validación de dueño)
 router.get("/:id", getTicketById);
+
 
 export default router;

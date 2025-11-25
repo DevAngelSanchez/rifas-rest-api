@@ -231,15 +231,10 @@ export const updateRaffle = async (req: Request, res: Response) => {
   }
 }
 
-// ----------------------------------------------------
-// 🗑️ ELIMINAR RIFA
-// ----------------------------------------------------
 export const deleteRaffle = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
 
-    // La eliminación de la rifa dispara la eliminación en cascada de todos los Tickets asociados
-    // (ver schema.prisma: onDelete: Cascade)
     await prisma.raffle.delete({ where: { id } });
 
     return res.status(200).json({ message: "Rifa y todos sus tickets eliminados exitosamente." });
@@ -283,5 +278,67 @@ export const getRaffleSummary = async (req: Request, res: Response) => {
   } catch (error) {
     console.error("Error 500 al obtener el resumen del dashboard: ", error);
     return res.status(500).json({ message: "Algo salió mal al obtener el resumen de rifas." });
+  }
+};
+
+export const getRaffleStudents = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    // 1. Buscar todos los tickets relacionados a la rifa
+    const tickets = await prisma.ticket.findMany({
+      where: { raffleId: id },
+      select: {
+        id: true,
+        number: true,
+        status: true,
+        user: {
+          select: {
+            id: true,
+            name: true,
+            room: { select: { id: true, name: true } }
+          }
+        }
+      },
+      orderBy: { number: "asc" }
+    });
+
+    // 2. Agrupar tickets por estudiante
+    const studentMap = new Map();
+
+    tickets.forEach(ticket => {
+      if (!ticket.user) return; // Solo tickets asignados a un estudiante
+
+      const userId = ticket.user.id;
+
+      if (!studentMap.has(userId)) {
+        studentMap.set(userId, {
+          id: ticket.user.id,
+          name: ticket.user.name,
+          room: ticket.user.room ? ticket.user.room.name : null,
+          ticketsBuyed: []
+        });
+      }
+
+      studentMap.get(userId).ticketsBuyed.push({
+        id: ticket.id,
+        number: ticket.number,
+        status: ticket.status
+      });
+    });
+
+    // Convertir el mapa a array ordenado
+    const results = Array.from(studentMap.values()).sort((a, b) =>
+      a.name.localeCompare(b.name)
+    );
+
+    return res.status(200).json({
+      raffleId: id,
+      students: results
+    });
+
+  } catch (error) {
+    console.error("Error 500 al obtener estudiantes de la rifa: ", error);
+    return res.status(500).json({ message: "Error obteniendo estudiantes de la rifa." });
   }
 };

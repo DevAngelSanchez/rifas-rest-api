@@ -8,7 +8,8 @@ import {
   getRaffleById,
   updateRaffle,
   deleteRaffle,
-  getRaffleSummary
+  getRaffleSummary,
+  getRaffleStudents
 } from "./raffle.controller";
 import { getRaffleInvoices } from "../invoice/invoice.controller";
 
@@ -24,6 +25,7 @@ router.delete("/:id", protectRoute, isAdmin, deleteRaffle);
 router.get("/", protectRoute, getAllRaffles);
 router.get("/summary", protectRoute, getRaffleSummary);
 router.get("/:id", protectRoute, getRaffleById);
+router.get("/:id/students", protectRoute, getRaffleStudents);
 router.get("/:raffleId/invoices", protectRoute, getRaffleInvoices);
 
 
