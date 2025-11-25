@@ -60,7 +60,7 @@ export const submitPayment = async (req: CustomRequest, res: Response) => {
     if (tickets.length !== ticketIds.length) {
       return res.status(404).json({ message: "Uno o más tickets no fueron encontrados." });
     }
-    if (tickets.some(t => t.status !== TicketStatus.PENDING)) {
+    if (tickets.some(t => t.status === TicketStatus.PAID)) {
       return res.status(400).json({ message: "Algunos tickets ya han sido pagados o están en revisión." });
     }
 
