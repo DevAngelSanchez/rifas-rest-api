@@ -4,6 +4,7 @@ import { Request, Response } from 'express';
 import { prisma } from '../../utils/const';
 import { Role, RaffleStatus, Prisma, TicketStatus } from '@prisma/client';
 import { createRaffleSchema, updateRaffleSchema } from './raffle.schema';
+import Excel from "exceljs";
 
 // ----------------------------------------------------
 // ➕ CREAR RIFA Y ASIGNAR TICKETS AUTOMÁTICAMENTE
@@ -348,5 +349,177 @@ export const getRaffleStudents = async (req: Request, res: Response) => {
   } catch (error) {
     console.error("Error 500 al obtener estudiantes de la rifa: ", error);
     return res.status(500).json({ message: "Error obteniendo estudiantes de la rifa." });
+  }
+};
+
+export const createRaffleExcel = async (req: Request, res: Response) => {
+  try {
+    const raffleId = req.params.id;
+    const apiBaseUrl = "https://api.rifaspromox.com"; // Para URLs de comprobantes
+
+    // -----------------------------
+    //   Consultar la rifa y tickets
+    // -----------------------------
+    const raffle = await prisma.raffle.findUnique({
+      where: { id: raffleId },
+      include: {
+        organizer: true,
+        ticketsSold: {
+          orderBy: { number: "asc" },
+          include: {
+            invoice: true,
+            user: true,
+          },
+        },
+      },
+    });
+
+    if (!raffle) return res.status(404).json({ message: "Raffle not found" });
+
+    // -----------------------------
+    //     Crear workbook y hojas
+    // -----------------------------
+    const workbook = new Excel.Workbook();
+
+    const sheet = workbook.addWorksheet("Tickets");
+
+    // -----------------------------
+    //     Definir columnas y headers
+    // -----------------------------
+    sheet.columns = [
+      { header: "Ticket Nº", key: "number" },
+      { header: "Comprador", key: "ownerName" },
+      { header: "Teléfono", key: "ownerPhone" },
+      { header: "Monto USD", key: "amountUsd" },
+      { header: "Monto BsS", key: "amountBss" },
+      { header: "Método", key: "paymentMethod" },
+      { header: "Referencia", key: "reference" },
+      { header: "Comprobante URL", key: "proofUrl" },
+      { header: "Vendedor", key: "seller" },
+      { header: "Estado Pago", key: "status" },
+      { header: "Fecha del Pago", key: "paymentDate" },
+      { header: "Fecha Venta Ticket", key: "saleDate" },
+    ];
+
+    // -----------------------------
+    //     Formatear headers
+    // -----------------------------
+    sheet.getRow(1).eachCell(cell => {
+      cell.fill = {
+        type: "pattern",
+        pattern: "solid",
+        fgColor: { argb: "FF1E90FF" }, // azul intenso
+      };
+      cell.font = { bold: true, color: { argb: "FFFFFFFF" } }; // texto blanco
+      cell.alignment = { horizontal: "center" };
+    });
+
+    // -----------------------------
+    //     Insertar datos de tickets
+    // -----------------------------
+    raffle.ticketsSold.forEach(ticket => {
+      const inv = ticket.invoice;
+      sheet.addRow({
+        number: ticket.number,
+        ownerName: ticket.ownerName || "N/A",
+        ownerPhone: ticket.ownerPhone || "N/A",
+        amountUsd: inv?.amountUsd?.toNumber() || 0,
+        amountBss: inv?.amountBss?.toNumber() || 0,
+        paymentMethod: inv?.paymentMethod || "N/A",
+        reference: inv?.reference || "N/A",
+        proofUrl: inv?.proofUrl ? apiBaseUrl + inv?.proofUrl : "N/A",
+        seller: ticket.user?.name || "Sin vendedor",
+        status: inv?.status || "N/A",
+        paymentDate: inv?.createdAt || null,
+        saleDate: ticket.createdAt,
+      });
+    });
+
+    // -----------------------------
+    //     Ajustar ancho de columnas
+    // -----------------------------
+    sheet.columns.forEach(column => {
+      // @ts-ignore: column puede ser undefined pero sabemos que no lo es en runtime
+      let maxLength = 10;
+      // @ts-ignore: cell.value puede ser undefined
+      column.eachCell({ includeEmpty: true }, (cell) => {
+        const value = cell.value?.toString() || "";
+        maxLength = Math.max(maxLength, value.length + 2);
+      });
+      // @ts-ignore: column no es undefined en realidad
+      column.width = maxLength;
+    });
+
+    // -----------------------------
+    //     Hoja de estadísticas
+    // -----------------------------
+    const statsSheet = workbook.addWorksheet("Estadísticas");
+
+    const tickets = raffle.ticketsSold;
+    const sold = tickets.length;
+
+    const totalUsd = tickets.reduce((acc, t) => acc + (Number(t.invoice?.amountUsd?.toNumber()) || 0), 0);
+    const totalBss = tickets.reduce((acc, t) => acc + (Number(t.invoice?.amountBss?.toNumber()) || 0), 0);
+
+    const pending = tickets.filter(t => t.invoice?.status === "PENDING").length;
+    const completed = tickets.filter(t => t.invoice?.status === "COMPLETED").length;
+    const failed = tickets.filter(t => t.invoice?.status === "FAILED").length;
+
+    const vendors: Record<string, number> = {};
+    tickets.forEach(t => {
+      if (!t.user) return;
+      const sellerName = t.user.name || t.user.username || "Vendedor sin nombre";
+      vendors[sellerName] = (vendors[sellerName] || 0) + 1;
+    });
+
+    statsSheet.addRow(["Nombre de la Rifa", raffle.title]);
+    statsSheet.addRow(["Premio", raffle.prize]);
+    statsSheet.addRow(["Precio por Ticket (USD)", raffle.ticketPrice.toNumber()]);
+    statsSheet.addRow(["Tickets Vendidos", sold]);
+    statsSheet.addRow(["Total USD", totalUsd]);
+    statsSheet.addRow(["Total BsS", totalBss]);
+    statsSheet.addRow(["Pagos Pendientes", pending]);
+    statsSheet.addRow(["Pagos Aprobados", completed]);
+    statsSheet.addRow(["Pagos Rechazados", failed]);
+    statsSheet.addRow([]);
+    statsSheet.addRow(["Ranking de Vendedores"]);
+    statsSheet.addRow(["Vendedor", "Tickets Vendidos"]);
+
+    Object.entries(vendors).forEach(([name, count]) => {
+      statsSheet.addRow([name, count]);
+    });
+
+    // -----------------------------
+    //     Ajustar ancho de columnas estadística
+    // -----------------------------
+    statsSheet.columns.forEach(column => {
+      let maxLength = 10;
+      // @ts-ignore
+      column.eachCell({ includeEmpty: true }, (cell) => {
+        const value = cell.value?.toString() || "";
+        maxLength = Math.max(maxLength, value.length + 2);
+      });
+      column.width = maxLength;
+    });
+
+    // -----------------------------
+    //     Enviar archivo
+    // -----------------------------
+    const buffer = await workbook.xlsx.writeBuffer();
+    res.setHeader(
+      "Content-Type",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    );
+    const sanitizedTitle = raffle.title.replace(/\s/g, "-").replace(/[^a-zA-Z0-9-]/g, "");
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename=raffle-${sanitizedTitle}.xlsx`
+    );
+    res.setHeader("Cache-Control", "no-store");
+    return res.send(buffer);
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Error generating Excel" });
   }
 };

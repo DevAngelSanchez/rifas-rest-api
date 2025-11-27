@@ -9,7 +9,8 @@ import {
   updateRaffle,
   deleteRaffle,
   getRaffleSummary,
-  getRaffleStudents
+  getRaffleStudents,
+  createRaffleExcel
 } from "./raffle.controller";
 import { getRaffleInvoices } from "../invoice/invoice.controller";
 
@@ -27,6 +28,7 @@ router.get("/summary", protectRoute, getRaffleSummary);
 router.get("/:id", protectRoute, getRaffleById);
 router.get("/:id/students", protectRoute, getRaffleStudents);
 router.get("/:raffleId/invoices", protectRoute, getRaffleInvoices);
+router.get("/export-raffle/:id", createRaffleExcel);
 
 
 export default router;
