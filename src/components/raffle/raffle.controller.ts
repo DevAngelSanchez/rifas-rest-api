@@ -298,7 +298,11 @@ export const getRaffleStudents = async (req: Request, res: Response) => {
             name: true,
             room: { select: { id: true, name: true } }
           }
-        }
+        },
+        ownerName: true,
+        ownerPhone: true,
+        invoiceId: true,
+        invoice: true
       },
       orderBy: { number: "asc" }
     });
@@ -323,7 +327,11 @@ export const getRaffleStudents = async (req: Request, res: Response) => {
       studentMap.get(userId).ticketsBuyed.push({
         id: ticket.id,
         number: ticket.number,
-        status: ticket.status
+        status: ticket.status,
+        ownerName: ticket.ownerName,
+        ownerPhone: ticket.ownerPhone,
+        invoiceId: ticket.invoiceId,
+        invoice: ticket.invoice
       });
     });
 
