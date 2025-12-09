@@ -1,7 +1,7 @@
 // src/types/schemas/user.ts (o la ruta donde manejes tus schemas)
 
 import { z } from 'zod';
-import { Role } from '@prisma/client';
+import { Role } from '../../generated/prisma/client';
 
 // ----------------------------------------------------
 // Esquema para la CREACIÓN de un usuario (Admin)

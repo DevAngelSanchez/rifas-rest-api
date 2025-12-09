@@ -1,6 +1,6 @@
 import { z } from 'zod';
-import { Decimal } from '@prisma/client/runtime/library';
-import { PaymentStatus } from '@prisma/client';
+import { Decimal } from '../../generated/prisma/internal/prismaNamespace';
+import { PaymentStatus } from '../../generated/prisma/enums';
 
 // Función para validar Decimal (necesario si Zod no soporta directamente el tipo Decimal de Prisma)
 const decimalValidation = z.custom<Decimal>(val => {

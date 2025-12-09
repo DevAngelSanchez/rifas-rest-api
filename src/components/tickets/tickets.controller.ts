@@ -2,7 +2,7 @@
 
 import { Request, Response } from 'express';
 import { prisma } from '../../utils/const';
-import { Prisma, TicketStatus } from '@prisma/client';
+import { Prisma, TicketStatus } from '../../generated/prisma/client';
 
 // ----------------------------------------------------
 // 📚 OBTENER TODOS LOS TICKETS POR RIFA (Admin View)

@@ -2,11 +2,10 @@
 
 import { Request, Response } from 'express';
 import { prisma } from '../../utils/const'; // Asumiendo que esta es tu instancia de Prisma Client
-import { Role } from '@prisma/client';
 import bcrypt from 'bcrypt';
-import { Prisma } from '@prisma/client';
 import { createUserSchema, updateUserSchema } from './user.schema';
 import z from 'zod';
+import { Prisma, Role } from '../../generated/prisma/client';
 
 const generateSimplePassword = (fullName: string): string => {
   const initial = fullName.trim().charAt(0).toUpperCase();

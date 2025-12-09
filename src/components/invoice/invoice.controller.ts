@@ -2,9 +2,10 @@
 
 import { Request, Response } from 'express';
 import { prisma } from '../../utils/const';
-import { TicketStatus, PaymentStatus, Prisma } from '@prisma/client';
-import { submitPaymentSchema, updateInvoiceStatusSchema } from './invoice.schema';
+import { submitPaymentSchema } from './invoice.schema';
 import { uploadProof } from '../../middleware/multer.middleware';
+import { PaymentStatus, TicketStatus } from '../../generated/prisma/enums';
+import { Prisma } from '../../generated/prisma/client';
 
 
 interface CustomRequest extends Request {

@@ -2,9 +2,10 @@
 
 import { Request, Response } from 'express';
 import { prisma } from '../../utils/const';
-import { Role, RaffleStatus, Prisma, TicketStatus } from '@prisma/client';
 import { createRaffleSchema, updateRaffleSchema } from './raffle.schema';
 import Excel from "exceljs";
+import { RaffleStatus, Role, TicketStatus } from '../../generated/prisma/enums';
+import { Prisma } from '../../generated/prisma/client';
 
 // ----------------------------------------------------
 // ➕ CREAR RIFA Y ASIGNAR TICKETS AUTOMÁTICAMENTE

@@ -1,9 +1,9 @@
 import { Request, Response } from 'express';
-import { Role } from '@prisma/client'; // Importamos el Enum
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { loginSchema, registerSchema } from './auth.schema'; // Importamos los schemas
 import { prisma, saltRounds } from '../utils/const';
+import { Role } from '../generated/prisma/enums';
 
 interface JwtPayload {
   id: string;

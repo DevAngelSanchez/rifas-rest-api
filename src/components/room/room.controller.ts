@@ -3,7 +3,7 @@
 import { Request, Response } from 'express';
 import { prisma } from '../../utils/const';
 import { createRoomSchema, updateRoomSchema } from './room.schema';
-import { Prisma } from '@prisma/client';
+import { Prisma } from '../../generated/prisma/client';
 
 /**
  * 📚 Obtener todas las secciones (opcionalmente filtradas por schoolId)

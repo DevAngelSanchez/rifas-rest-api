@@ -1,10 +1,16 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
 generator client {
-  provider = "prisma-client-js"
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
 }
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
 }
 
 /// Define los roles de usuario en el sistema
@@ -82,6 +88,13 @@ model User {
   invoices      Invoice[]
   createdRaffle Raffle[]  @relation("RaffleOrganizer") // Solo para Admins
   tickets       Ticket[]
+
+  // Relaciones con Eventos
+  organizedEvents   Event[]               @relation("EventOrganizer") // Solo para Admins
+  eventTickets      EventTicket[]         @relation("AssignedEventTickets") // Tickets vendidos por este admin
+  receivedTransfers EventTicketTransfer[] @relation("TransferTo") // Tickets recibidos en transferencias
+  sentTransfers     EventTicketTransfer[] @relation("TransferFrom") // Tickets enviados en transfer
+  eventSoldTickets  EventTicket[]         @relation("TicketSeller") // Tickets vendidos por este admin
 }
 
 /// Modelo para las Rifas
@@ -160,5 +173,85 @@ model Invoice {
   userId String
   user   User   @relation(fields: [userId], references: [id])
 
-  tickets Ticket[]
+  tickets      Ticket[]
+  eventTickets EventTicket[]
+}
+
+/// Eventos creados por un admin
+model Event {
+  id          String   @id @default(cuid())
+  title       String
+  type        String // Ej: "Concierto", "Obra de Teatro"
+  description String?  @default("N/A")
+  location    String? // Ej: "El Patio"
+  date        DateTime // Fecha del evento
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  organizerId String
+  organizer   User   @relation("EventOrganizer", fields: [organizerId], references: [id])
+
+  ticketTypes EventTicketType[]
+  tickets     EventTicket[]
+}
+
+model EventTicket {
+  id        String       @id @default(cuid())
+  code      String       @unique // Código del ticket (similar al number)
+  status    TicketStatus @default(PENDING)
+  createdAt DateTime     @default(now())
+
+  // Tipo de ticket: General / VIP
+  ticketTypeId String
+  ticketType   EventTicketType @relation(fields: [ticketTypeId], references: [id], onDelete: Cascade)
+
+  // Relación con evento
+  eventId String
+  event   Event  @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  // Estudiante asignado (puede ser null si todavía no hay dueño)
+  studentId String?
+  student   User?   @relation("AssignedEventTickets", fields: [studentId], references: [id], onDelete: SetNull)
+
+  // Quién vendió el ticket
+  sellerId String?
+  seller   User?   @relation("TicketSeller", fields: [sellerId], references: [id], onDelete: SetNull)
+
+  // Datos del comprador final
+  ownerName  String?
+  ownerPhone String?
+
+  // Relación al recibo de pago
+  invoiceId String?
+  invoice   Invoice? @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+
+  transfers EventTicketTransfer[]
+}
+
+model EventTicketType {
+  id        String   @id @default(cuid())
+  name      String // Ej: "General", "VIP"
+  price     Decimal // Precio por unidad
+  createdAt DateTime @default(now())
+
+  // Relación con el Event
+  eventId String
+  event   Event  @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  tickets EventTicket[]
+}
+
+// Registro histórico de intercambios
+model EventTicketTransfer {
+  id       String      @id @default(cuid())
+  ticketId String
+  ticket   EventTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  fromId String?
+  from   User?   @relation("TransferFrom", fields: [fromId], references: [id])
+
+  toId String
+  to   User   @relation("TransferTo", fields: [toId], references: [id])
+
+  createdAt DateTime @default(now())
 }

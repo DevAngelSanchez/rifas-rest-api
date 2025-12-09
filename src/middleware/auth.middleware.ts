@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
-import { Role } from '@prisma/client';
 import { UserPayload } from '../types/express'; // Importamos nuestro tipo
+import { Role } from '../generated/prisma/client';
 
 /**
  * 🔐 protectRoute: Middleware de Autenticación

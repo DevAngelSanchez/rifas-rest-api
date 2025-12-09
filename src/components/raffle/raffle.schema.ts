@@ -1,7 +1,7 @@
 // src/types/schemas/raffle.ts
 
 import { z } from 'zod';
-import { RaffleStatus } from '@prisma/client';
+import { RaffleStatus } from '../../generated/prisma/enums';
 
 // ----------------------------------------------------
 // Esquema para la CREACIÓN de una Rifa

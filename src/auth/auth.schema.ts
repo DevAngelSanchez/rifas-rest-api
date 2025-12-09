@@ -1,5 +1,5 @@
-import { z } from 'zod';
-import { Role } from '@prisma/client'; // Importa el Enum generado por Prisma
+import { z } from 'zod'; // Importa el Enum generado por Prisma
+import { Role } from '../generated/prisma/enums';
 
 // Schema para el registro
 export const registerSchema = z.object({
