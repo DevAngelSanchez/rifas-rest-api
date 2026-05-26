@@ -168,6 +168,7 @@ export type InvoiceScalarFieldEnum = (typeof InvoiceScalarFieldEnum)[keyof typeo
 export const EventScalarFieldEnum = {
   id: 'id',
   title: 'title',
+  type: 'type',
   description: 'description',
   location: 'location',
   date: 'date',

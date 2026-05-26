@@ -21,7 +21,7 @@
     "express": "5.1.0",
     "jsonwebtoken": "9.0.2",
     "multer": "2.0.2",
-    "pg": "^8.16.3",
+    "pg": "^8.21.0",
     "tsconfig-paths": "4.2.0",
     "zod": "4.1.12"
   },
@@ -33,7 +33,7 @@
     "@types/jsonwebtoken": "9.0.10",
     "@types/multer": "2.0.0",
     "@types/node": "^24.10.1",
-    "@types/pg": "^8.15.6",
+    "@types/pg": "^8.20.0",
     "prisma": "^7.1.0",
     "ts-jest": "29.1.2",
     "ts-node": "10.9.2",
